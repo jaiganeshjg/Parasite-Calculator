@@ -5,15 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parasite Dilution Calculator</title>
     
-    <!-- App Manifest & Theme Colors for Android/iOS -->
+    <!-- PWA Manifest and App Info -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0277bd">
     <link rel="apple-touch-icon" href="icon.png">
 
-    <style>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parasite Dilution Calculator</title>
     <style>
         body { font-family: system-ui, sans-serif; padding: 20px; max-width: 450px; margin: 0 auto; background: #f4f4f9; }
         .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -35,6 +31,22 @@
         
         .result { margin-top: 25px; padding: 16px; background: #e3f2fd; border-radius: 8px; color: #0277bd; font-size: 15px; line-height: 1.6; }
         .error { background: #ffebee; color: #c62828; }
+
+        /* Reset Button Styling */
+        .reset-btn { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 15px; 
+            background-color: #fff; 
+            color: #d32f2f; 
+            border: 1px solid #ffcdd2; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: background-color 0.2s; 
+        }
+        .reset-btn:hover { background-color: #ffebee; }
     </style>
 </head>
 <body>
@@ -111,18 +123,18 @@
         </div>
         
         <div class="result" id="recipe">Enter three values to generate your recipe...</div>
+        
+        <!-- Reset Button -->
+        <button class="reset-btn" onclick="resetCalculator()">Clear & Reset</button>
     </div>
 
     <script>
-        // Track the field we calculated so we can recalculate it if a dropdown changes
         let lastCalculatedId = null;
 
         function handleInput(e) {
-            // If user manually clears a field, it becomes the new target
             if (e.target.value === '') {
                 if (lastCalculatedId === e.target.id) lastCalculatedId = null;
             } else {
-                // If user types into a field while another field is the answer, clear the answer field to update it
                 if (lastCalculatedId && e.target.id !== lastCalculatedId) {
                     document.getElementById(lastCalculatedId).value = '';
                 }
@@ -131,7 +143,6 @@
         }
 
         function handleDropdown() {
-            // If a dropdown unit changes, immediately recalculate the target field
             if (lastCalculatedId) {
                 document.getElementById(lastCalculatedId).value = '';
             }
@@ -159,13 +170,11 @@
             const emptyCount = vals.filter(v => isNaN(v)).length;
 
             if (emptyCount === 1) {
-                // Combine exponents and unit conversions into unified multipliers
                 const c1_m = c1_exp * c1_unit;
                 const v1_m = v1_unit;
                 const c2_m = c2_exp * c2_unit;
                 const v2_m = v2_unit;
 
-                // Solve for the single blank field
                 if (emptyIdx === 0) {
                     c1_base.value = parseFloat(((vals[2] * c2_m * vals[3] * v2_m) / (v1_m * c1_m * vals[1])).toFixed(4));
                     lastCalculatedId = 'c1_base';
@@ -180,19 +189,15 @@
                     lastCalculatedId = 'v2_base';
                 }
 
-                // Remove highlight from all, then highlight the newly calculated field
                 elMap.forEach(el => el.classList.remove('calculated-field'));
                 document.getElementById(lastCalculatedId).classList.add('calculated-field');
 
-                // Generate the Recipe Text
                 const f_v1 = parseFloat(v1_base.value);
                 const f_v2 = parseFloat(v2_base.value);
                 
-                // Standardize to V2's unit to calculate how much diluent to add
                 const v1_in_v2_unit = f_v1 * (v1_m / v2_m);
                 const diluent = parseFloat((f_v2 - v1_in_v2_unit).toFixed(4));
 
-                // Grab the text of the selected volume dropdowns for the recipe string
                 const v1_txt = document.getElementById('v1_unit').options[document.getElementById('v1_unit').selectedIndex].text;
                 const v2_txt = document.getElementById('v2_unit').options[document.getElementById('v2_unit').selectedIndex].text;
 
@@ -208,6 +213,31 @@
                 recipe.innerHTML = "Enter three values to generate your recipe...";
                 elMap.forEach(el => el.classList.remove('calculated-field'));
             }
+        }
+
+        // Reset functionality
+        function resetCalculator() {
+            // Clear all text fields
+            const elMap = ['c1_base', 'v1_base', 'c2_base', 'v2_base'];
+            elMap.forEach(id => {
+                const el = document.getElementById(id);
+                el.value = '';
+                el.classList.remove('calculated-field');
+            });
+
+            // Reset dropdowns to defaults
+            document.getElementById('c1_exp').value = '10000';
+            document.getElementById('c1_unit').value = '1';
+            document.getElementById('v1_unit').value = '0.001';
+            document.getElementById('c2_exp').value = '10000';
+            document.getElementById('c2_unit').value = '1';
+            document.getElementById('v2_unit').value = '1';
+
+            // Reset state and UI
+            lastCalculatedId = null;
+            const recipe = document.getElementById('recipe');
+            recipe.className = "result";
+            recipe.innerHTML = "Enter three values to generate your recipe...";
         }
     </script>
 </body>
