@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parasite Dilution Calculator</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; max-width: 450px; margin: 0 auto; background: #f4f4f9; }
+        .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; margin-bottom: 5px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .input-group { margin-bottom: 18px; }
+        label { display: block; font-weight: bold; color: #444; font-size: 13px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Flexbox for the side-by-side inputs */
+        .flex-row { display: flex; align-items: center; gap: 6px; }
+        .multiply { color: #666; font-weight: bold; padding: 0 2px; }
+        
+        input { flex: 1; min-width: 60px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background: #fafafa; }
+        select { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; background: #fff; cursor: pointer; color: #333; }
+        input:focus, select:focus { outline: none; border-color: #0277bd; }
+        
+        /* Highlight the field that the app calculated */
+        .calculated-field { background-color: #e8f5e9; border-color: #4caf50; font-weight: bold; color: #2e7d32; }
+        
+        .result { margin-top: 25px; padding: 16px; background: #e3f2fd; border-radius: 8px; color: #0277bd; font-size: 15px; line-height: 1.6; }
+        .error { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Culture Calculator</h2>
+        <div class="subtitle">Leave the field you want to calculate blank.</div>
+        
+        <!-- C1 -->
+        <div class="input-group">
+            <label>Parasites in Your Stock (C₁)</label>
+            <div class="flex-row">
+                <input type="number" id="c1_base" placeholder="e.g., 65" oninput="handleInput(event)">
+                <span class="multiply">×</span>
+                <select id="c1_exp" onchange="handleDropdown()">
+                    <option value="1">10⁰</option>
+                    <option value="1000">10³</option>
+                    <option value="10000" selected>10⁴</option>
+                    <option value="100000">10⁵</option>
+                    <option value="1000000">10⁶</option>
+                    <option value="10000000">10⁷</option>
+                    <option value="100000000">10⁸</option>
+                </select>
+                <select id="c1_unit" onchange="handleDropdown()">
+                    <option value="1">/mL</option>
+                    <option value="1000">/µL</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- V1 -->
+        <div class="input-group">
+            <label>Volume of Stock to Take (V₁)</label>
+            <div class="flex-row">
+                <input type="number" id="v1_base" placeholder="Calculates..." oninput="handleInput(event)">
+                <select id="v1_unit" onchange="handleDropdown()">
+                    <option value="0.001" selected>µL</option>
+                    <option value="1">mL</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- C2 -->
+        <div class="input-group">
+            <label>Required Final Concentration (C₂)</label>
+            <div class="flex-row">
+                <input type="number" id="c2_base" placeholder="e.g., 2" oninput="handleInput(event)">
+                <span class="multiply">×</span>
+                <select id="c2_exp" onchange="handleDropdown()">
+                    <option value="1">10⁰</option>
+                    <option value="1000">10³</option>
+                    <option value="10000" selected>10⁴</option>
+                    <option value="100000">10⁵</option>
+                    <option value="1000000">10⁶</option>
+                    <option value="10000000">10⁷</option>
+                    <option value="100000000">10⁸</option>
+                </select>
+                <select id="c2_unit" onchange="handleDropdown()">
+                    <option value="1">/mL</option>
+                    <option value="1000">/µL</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- V2 -->
+        <div class="input-group">
+            <label>Final Culture Volume (V₂)</label>
+            <div class="flex-row">
+                <input type="number" id="v2_base" placeholder="e.g., 6" oninput="handleInput(event)">
+                <select id="v2_unit" onchange="handleDropdown()">
+                    <option value="0.001">µL</option>
+                    <option value="1" selected>mL</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="result" id="recipe">Enter three values to generate your recipe...</div>
+    </div>
+
+    <script>
+        // Track the field we calculated so we can recalculate it if a dropdown changes
+        let lastCalculatedId = null;
+
+        function handleInput(e) {
+            // If user manually clears a field, it becomes the new target
+            if (e.target.value === '') {
+                if (lastCalculatedId === e.target.id) lastCalculatedId = null;
+            } else {
+                // If user types into a field while another field is the answer, clear the answer field to update it
+                if (lastCalculatedId && e.target.id !== lastCalculatedId) {
+                    document.getElementById(lastCalculatedId).value = '';
+                }
+            }
+            runMath();
+        }
+
+        function handleDropdown() {
+            // If a dropdown unit changes, immediately recalculate the target field
+            if (lastCalculatedId) {
+                document.getElementById(lastCalculatedId).value = '';
+            }
+            runMath();
+        }
+
+        function runMath() {
+            const c1_base = document.getElementById('c1_base');
+            const v1_base = document.getElementById('v1_base');
+            const c2_base = document.getElementById('c2_base');
+            const v2_base = document.getElementById('v2_base');
+
+            const c1_exp = parseFloat(document.getElementById('c1_exp').value);
+            const c1_unit = parseFloat(document.getElementById('c1_unit').value);
+            const v1_unit = parseFloat(document.getElementById('v1_unit').value);
+            const c2_exp = parseFloat(document.getElementById('c2_exp').value);
+            const c2_unit = parseFloat(document.getElementById('c2_unit').value);
+            const v2_unit = parseFloat(document.getElementById('v2_unit').value);
+
+            const recipe = document.getElementById('recipe');
+            const elMap = [c1_base, v1_base, c2_base, v2_base];
+            const vals = elMap.map(el => parseFloat(el.value));
+            
+            const emptyIdx = vals.findIndex(v => isNaN(v));
+            const emptyCount = vals.filter(v => isNaN(v)).length;
+
+            if (emptyCount === 1) {
+                // Combine exponents and unit conversions into unified multipliers
+                const c1_m = c1_exp * c1_unit;
+                const v1_m = v1_unit;
+                const c2_m = c2_exp * c2_unit;
+                const v2_m = v2_unit;
+
+                // Solve for the single blank field
+                if (emptyIdx === 0) {
+                    c1_base.value = parseFloat(((vals[2] * c2_m * vals[3] * v2_m) / (v1_m * c1_m * vals[1])).toFixed(4));
+                    lastCalculatedId = 'c1_base';
+                } else if (emptyIdx === 1) {
+                    v1_base.value = parseFloat(((vals[2] * c2_m * vals[3] * v2_m) / (c1_m * v1_m * vals[0])).toFixed(4));
+                    lastCalculatedId = 'v1_base';
+                } else if (emptyIdx === 2) {
+                    c2_base.value = parseFloat(((vals[0] * c1_m * vals[1] * v1_m) / (v2_m * c2_m * vals[3])).toFixed(4));
+                    lastCalculatedId = 'c2_base';
+                } else if (emptyIdx === 3) {
+                    v2_base.value = parseFloat(((vals[0] * c1_m * vals[1] * v1_m) / (c2_m * v2_m * vals[2])).toFixed(4));
+                    lastCalculatedId = 'v2_base';
+                }
+
+                // Remove highlight from all, then highlight the newly calculated field
+                elMap.forEach(el => el.classList.remove('calculated-field'));
+                document.getElementById(lastCalculatedId).classList.add('calculated-field');
+
+                // Generate the Recipe Text
+                const f_v1 = parseFloat(v1_base.value);
+                const f_v2 = parseFloat(v2_base.value);
+                
+                // Standardize to V2's unit to calculate how much diluent to add
+                const v1_in_v2_unit = f_v1 * (v1_m / v2_m);
+                const diluent = parseFloat((f_v2 - v1_in_v2_unit).toFixed(4));
+
+                // Grab the text of the selected volume dropdowns for the recipe string
+                const v1_txt = document.getElementById('v1_unit').options[document.getElementById('v1_unit').selectedIndex].text;
+                const v2_txt = document.getElementById('v2_unit').options[document.getElementById('v2_unit').selectedIndex].text;
+
+                if (f_v2 < v1_in_v2_unit) {
+                    recipe.className = "result error";
+                    recipe.innerHTML = `⚠️ <strong>Impossible Concentration:</strong> Your target concentration is higher than your stock concentration.`;
+                } else {
+                    recipe.className = "result";
+                    recipe.innerHTML = `🧪 <strong>Recipe:</strong><br><br>Mix <strong>${f_v1} ${v1_txt}</strong> of your stock with <strong>${diluent} ${v2_txt}</strong> of media to reach your total volume of <strong>${f_v2} ${v2_txt}</strong>.`;
+                }
+            } else {
+                recipe.className = "result";
+                recipe.innerHTML = "Enter three values to generate your recipe...";
+                elMap.forEach(el => el.classList.remove('calculated-field'));
+            }
+        }
+    </script>
+</body>
+</html>
